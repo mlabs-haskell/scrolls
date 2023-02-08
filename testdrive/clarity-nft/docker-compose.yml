@@ -1,0 +1,18 @@
+version: "3.7"
+
+services:
+  redis:
+    image: redis
+    volumes:
+      - ./data:/data
+    ports:
+      - "6379:6379"
+  scrolls:
+    build:
+      context: ./../../.
+    command: [ "daemon" ]
+    environment:
+      - RUST_LOG=info
+    volumes:
+      - ./daemon.toml:/etc/scrolls/daemon.toml
+    network_mode: host

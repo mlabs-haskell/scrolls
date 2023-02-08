@@ -26,7 +26,7 @@ WORKDIR /code
 
 COPY . .
 
-RUN cargo build --release --target ${RUST_TARGET} --all-features
+RUN cargo build --release --target ${RUST_TARGET}
 
 RUN cp /code/target/${RUST_TARGET}/release/scrolls /scrolls
 
