@@ -236,6 +236,7 @@ impl gasket::runtime::Worker for Worker {
             model::CRDTCommand::PNCounter(key, value) => {
                 log::debug!("increasing counter [{}], by [{}]", key, value);
 
+                // TODO(t4ccer): Add option to delete key if value is 0 after decr
                 self.connection
                     .as_mut()
                     .unwrap()

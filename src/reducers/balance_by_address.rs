@@ -1,6 +1,8 @@
+use pallas::crypto::hash::Hash;
 use pallas::ledger::traverse::MultiEraOutput;
-use pallas::ledger::traverse::{MultiEraBlock, OutputRef};
+use pallas::ledger::traverse::{Asset, MultiEraBlock, OutputRef};
 use serde::Deserialize;
+use std::str::FromStr;
 
 use crate::{crosscut, model, prelude::*};
 
@@ -8,6 +10,7 @@ use crate::{crosscut, model, prelude::*};
 pub struct Config {
     pub key_prefix: Option<String>,
     pub filter: Option<crosscut::filters::Predicate>,
+    pub policy_id_hex: Option<String>,
 }
 
 pub struct Reducer {
@@ -16,6 +19,23 @@ pub struct Reducer {
 }
 
 impl Reducer {
+    fn get_token_amount(&self, utxo: &MultiEraOutput) -> i64 {
+        match &self.config.policy_id_hex {
+            None => utxo.lovelace_amount() as i64,
+            Some(policy_id_hex) => {
+                let mut total: i64 = 0;
+                for asset in utxo.non_ada_assets().iter() {
+                    if let Asset::NativeAsset(asset_cs, _, amount) = asset {
+                        if &hex::encode(asset_cs) == policy_id_hex {
+                            total += *amount as i64;
+                        }
+                    }
+                }
+                total
+            }
+        }
+    }
+
     fn process_consumed_txo(
         &mut self,
         ctx: &model::BlockContext,
@@ -36,7 +56,7 @@ impl Reducer {
             None => format!("{}.{}", "balance_by_address".to_string(), address),
         };
 
-        let crdt = model::CRDTCommand::PNCounter(key, -1 * utxo.lovelace_amount() as i64);
+        let crdt = model::CRDTCommand::PNCounter(key, -1 * self.get_token_amount(&utxo));
 
         output.send(gasket::messaging::Message::from(crdt))?;
 
@@ -55,7 +75,7 @@ impl Reducer {
             None => format!("{}.{}", "balance_by_address".to_string(), address),
         };
 
-        let crdt = model::CRDTCommand::PNCounter(key, tx_output.lovelace_amount() as i64);
+        let crdt = model::CRDTCommand::PNCounter(key, self.get_token_amount(&tx_output));
 
         output.send(gasket::messaging::Message::from(crdt))?;
 
