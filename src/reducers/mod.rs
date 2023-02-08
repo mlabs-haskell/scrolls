@@ -13,6 +13,7 @@ pub mod macros;
 pub mod point_by_tx;
 pub mod pool_by_stake;
 pub mod utxo_by_address;
+pub mod balance_by_address;
 mod worker;
 
 #[cfg(feature = "unstable")]
@@ -21,8 +22,6 @@ pub mod address_by_asset;
 pub mod address_by_txo;
 #[cfg(feature = "unstable")]
 pub mod asset_holders_by_asset_id;
-#[cfg(feature = "unstable")]
-pub mod balance_by_address;
 #[cfg(feature = "unstable")]
 pub mod block_header_by_hash;
 #[cfg(feature = "unstable")]
@@ -44,11 +43,10 @@ pub enum Config {
     UtxoByAddress(utxo_by_address::Config),
     PointByTx(point_by_tx::Config),
     PoolByStake(pool_by_stake::Config),
+    BalanceByAddress(balance_by_address::Config),
 
     #[cfg(feature = "unstable")]
     AddressByTxo(address_by_txo::Config),
-    #[cfg(feature = "unstable")]
-    BalanceByAddress(balance_by_address::Config),
     #[cfg(feature = "unstable")]
     TxByHash(tx_by_hash::Config),
     #[cfg(feature = "unstable")]
@@ -79,11 +77,10 @@ impl Config {
             Config::UtxoByAddress(c) => c.plugin(policy),
             Config::PointByTx(c) => c.plugin(),
             Config::PoolByStake(c) => c.plugin(),
+            Config::BalanceByAddress(c) => c.plugin(policy),
 
             #[cfg(feature = "unstable")]
             Config::AddressByTxo(c) => c.plugin(policy),
-            #[cfg(feature = "unstable")]
-            Config::BalanceByAddress(c) => c.plugin(policy),
             #[cfg(feature = "unstable")]
             Config::TxByHash(c) => c.plugin(policy),
             #[cfg(feature = "unstable")]
@@ -155,11 +152,10 @@ pub enum Reducer {
     UtxoByAddress(utxo_by_address::Reducer),
     PointByTx(point_by_tx::Reducer),
     PoolByStake(pool_by_stake::Reducer),
+    BalanceByAddress(balance_by_address::Reducer),
 
     #[cfg(feature = "unstable")]
     AddressByTxo(address_by_txo::Reducer),
-    #[cfg(feature = "unstable")]
-    BalanceByAddress(balance_by_address::Reducer),
     #[cfg(feature = "unstable")]
     TxByHash(tx_by_hash::Reducer),
     #[cfg(feature = "unstable")]
@@ -191,11 +187,10 @@ impl Reducer {
             Reducer::UtxoByAddress(x) => x.reduce_block(block, ctx, output),
             Reducer::PointByTx(x) => x.reduce_block(block, output),
             Reducer::PoolByStake(x) => x.reduce_block(block, output),
+            Reducer::BalanceByAddress(x) => x.reduce_block(block, ctx, output),
 
             #[cfg(feature = "unstable")]
             Reducer::AddressByTxo(x) => x.reduce_block(block, ctx, output),
-            #[cfg(feature = "unstable")]
-            Reducer::BalanceByAddress(x) => x.reduce_block(block, ctx, output),
             #[cfg(feature = "unstable")]
             Reducer::TxByHash(x) => x.reduce_block(block, ctx, output),
             #[cfg(feature = "unstable")]
