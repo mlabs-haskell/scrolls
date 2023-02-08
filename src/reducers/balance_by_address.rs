@@ -19,20 +19,23 @@ pub struct Reducer {
 }
 
 impl Reducer {
-    fn get_token_amount(&self, utxo: &MultiEraOutput) -> i64 {
+    fn get_tokens_amount(&self, utxo: &MultiEraOutput) -> i64 {
         match &self.config.policy_id_hex {
             None => utxo.lovelace_amount() as i64,
-            Some(policy_id_hex) => {
-                let mut total: i64 = 0;
-                for asset in utxo.non_ada_assets().iter() {
-                    if let Asset::NativeAsset(asset_cs, _, amount) = asset {
-                        if &hex::encode(asset_cs) == policy_id_hex {
-                            total += *amount as i64;
+            Some(policy_id_hex) => utxo
+                .non_ada_assets()
+                .iter()
+                .map(|asset| match asset {
+                    Asset::Ada(..) => 0, // Unreachable
+                    Asset::NativeAsset(cs, _tn, amt) => {
+                        if &hex::encode(cs) == policy_id_hex {
+                            *amt as i64
+                        } else {
+                            0
                         }
                     }
-                }
-                total
-            }
+                })
+                .sum(),
         }
     }
 
@@ -56,7 +59,7 @@ impl Reducer {
             None => format!("{}.{}", "balance_by_address".to_string(), address),
         };
 
-        let delta = self.get_token_amount(&utxo);
+        let delta = self.get_tokens_amount(&utxo);
         if delta != 0 {
             let crdt = model::CRDTCommand::PNCounter(key, -1 * delta);
             output.send(gasket::messaging::Message::from(crdt))?;
@@ -77,7 +80,7 @@ impl Reducer {
             None => format!("{}.{}", "balance_by_address".to_string(), address),
         };
 
-        let delta = self.get_token_amount(&tx_output);
+        let delta = self.get_tokens_amount(&tx_output);
         if delta != 0 {
             let crdt = model::CRDTCommand::PNCounter(key, delta);
             output.send(gasket::messaging::Message::from(crdt))?;
