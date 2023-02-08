@@ -56,9 +56,11 @@ impl Reducer {
             None => format!("{}.{}", "balance_by_address".to_string(), address),
         };
 
-        let crdt = model::CRDTCommand::PNCounter(key, -1 * self.get_token_amount(&utxo));
-
-        output.send(gasket::messaging::Message::from(crdt))?;
+        let delta = self.get_token_amount(&utxo);
+        if delta != 0 {
+            let crdt = model::CRDTCommand::PNCounter(key, -1 * delta);
+            output.send(gasket::messaging::Message::from(crdt))?;
+        }
 
         Ok(())
     }
@@ -75,9 +77,11 @@ impl Reducer {
             None => format!("{}.{}", "balance_by_address".to_string(), address),
         };
 
-        let crdt = model::CRDTCommand::PNCounter(key, self.get_token_amount(&tx_output));
-
-        output.send(gasket::messaging::Message::from(crdt))?;
+        let delta = self.get_token_amount(&tx_output);
+        if delta != 0 {
+            let crdt = model::CRDTCommand::PNCounter(key, delta);
+            output.send(gasket::messaging::Message::from(crdt))?;
+        }
 
         Ok(())
     }
