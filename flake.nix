@@ -22,7 +22,14 @@
         if builtins.hasAttr "currentSystem" builtins
         then [ builtins.currentSystem ]
         else inputs.nixpkgs.lib.systems.flakeExposed;
-      flake.herculesCI.ciSystems = [ "x86_64-linux" ];
+      flake = {
+        herculesCI.ciSystems = [ "x86_64-linux" ];
+
+        nixosModules.scrolls = { pkgs, lib, ... }: {
+          imports = [ ./scrolls-nixos-module.nix ];
+          services.scrolls.package = lib.mkOptionDefault self.packages.${pkgs.system}.scrolls;
+        };
+      };
       perSystem =
         { config
         , self'
@@ -37,6 +44,7 @@
             };
             default = self'.packages.scrolls;
           };
+
           devShells.default = pkgs.mkShell {
             nativeBuildInputs = [
               pkgs.cargo
@@ -48,6 +56,7 @@
               pkgs.redis
             ];
           };
+
           formatter = pkgs.nixpkgs-fmt;
         };
     };
