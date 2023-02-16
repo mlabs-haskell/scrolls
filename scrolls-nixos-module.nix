@@ -80,6 +80,7 @@ with lib;
         serviceConfig = {
           User = conf.user;
           Group = conf.user;
+          Restart = "always";
           # TODO: Finish it
         };
       })
