@@ -19,22 +19,22 @@ pub struct Reducer {
 }
 
 impl Reducer {
+    fn get_native (asset: &Asset) -> Option<(&Hash<28>, &Vec<u8>, &u64)> {
+        match asset {
+            Asset::Ada(..) => None,
+            Asset::NativeAsset(cs, tn, amt) => Some((cs, tn, amt)),
+        }
+    }
+
     fn get_tokens_amount(&self, utxo: &MultiEraOutput) -> i64 {
         match &self.config.policy_id_hex {
             None => utxo.lovelace_amount() as i64,
             Some(policy_id_hex) => utxo
                 .non_ada_assets()
                 .iter()
-                .map(|asset| match asset {
-                    Asset::Ada(..) => 0, // Unreachable
-                    Asset::NativeAsset(cs, _tn, amt) => {
-                        if &hex::encode(cs) == policy_id_hex {
-                            *amt as i64
-                        } else {
-                            0
-                        }
-                    }
-                })
+                .flat_map(|asset| Self::get_native(asset))
+                .filter(|(cs, _, _)| &hex::encode(cs) == policy_id_hex)
+                .map(|(_, _, amt)| *amt as i64)
                 .sum(),
         }
     }
