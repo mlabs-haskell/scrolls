@@ -3,7 +3,6 @@ use std::{collections::HashMap, fmt::Debug};
 use pallas::{
     ledger::traverse::{Era, MultiEraBlock, MultiEraOutput, MultiEraTx, OutputRef},
     network::miniprotocols::Point,
-    crypto::hash::Hash,
 };
 
 use crate::prelude::*;

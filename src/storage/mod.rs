@@ -28,7 +28,7 @@ impl Config {
         self,
         chain: &crosscut::ChainWellKnownInfo,
         intersect: &crosscut::IntersectConfig,
-        policy: &crosscut::policies::RuntimePolicy,
+        _policy: &crosscut::policies::RuntimePolicy,
     ) -> Bootstrapper {
         match self {
             Config::Skip(c) => Bootstrapper::Skip(c.bootstrapper()),

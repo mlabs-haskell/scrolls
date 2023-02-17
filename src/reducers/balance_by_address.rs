@@ -2,7 +2,6 @@ use pallas::crypto::hash::Hash;
 use pallas::ledger::traverse::MultiEraOutput;
 use pallas::ledger::traverse::{Asset, MultiEraBlock, OutputRef};
 use serde::Deserialize;
-use std::str::FromStr;
 
 use crate::{crosscut, model, prelude::*};
 

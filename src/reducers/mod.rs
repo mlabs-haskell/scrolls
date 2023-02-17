@@ -72,7 +72,7 @@ pub enum Config {
 impl Config {
     fn plugin(
         self,
-        chain: &crosscut::ChainWellKnownInfo,
+        _chain: &crosscut::ChainWellKnownInfo,
         policy: &crosscut::policies::RuntimePolicy,
     ) -> Reducer {
         match self {
