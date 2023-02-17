@@ -14,6 +14,7 @@ pub mod point_by_tx;
 pub mod pool_by_stake;
 pub mod utxo_by_address;
 pub mod balance_by_address;
+pub mod balance_by_genius_stake;
 mod worker;
 
 #[cfg(feature = "unstable")]
@@ -44,6 +45,7 @@ pub enum Config {
     PointByTx(point_by_tx::Config),
     PoolByStake(pool_by_stake::Config),
     BalanceByAddress(balance_by_address::Config),
+    BalanceByGeniusStake(balance_by_genius_stake::Config),
 
     #[cfg(feature = "unstable")]
     AddressByTxo(address_by_txo::Config),
@@ -78,6 +80,7 @@ impl Config {
             Config::PointByTx(c) => c.plugin(),
             Config::PoolByStake(c) => c.plugin(),
             Config::BalanceByAddress(c) => c.plugin(policy),
+            Config::BalanceByGeniusStake(c) => c.plugin(policy),
 
             #[cfg(feature = "unstable")]
             Config::AddressByTxo(c) => c.plugin(policy),
@@ -153,6 +156,7 @@ pub enum Reducer {
     PointByTx(point_by_tx::Reducer),
     PoolByStake(pool_by_stake::Reducer),
     BalanceByAddress(balance_by_address::Reducer),
+    BalanceByGeniusStake(balance_by_genius_stake::Reducer),
 
     #[cfg(feature = "unstable")]
     AddressByTxo(address_by_txo::Reducer),
@@ -188,6 +192,7 @@ impl Reducer {
             Reducer::PointByTx(x) => x.reduce_block(block, output),
             Reducer::PoolByStake(x) => x.reduce_block(block, output),
             Reducer::BalanceByAddress(x) => x.reduce_block(block, ctx, output),
+            Reducer::BalanceByGeniusStake(x) => x.reduce_block(block, ctx, output),
 
             #[cfg(feature = "unstable")]
             Reducer::AddressByTxo(x) => x.reduce_block(block, ctx, output),

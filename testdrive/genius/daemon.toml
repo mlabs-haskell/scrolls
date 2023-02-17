@@ -1,0 +1,24 @@
+[source]
+type = "N2N"
+address = "relay1.nordicpool.org:3005"
+
+[[reducers]]
+type = "BalanceByGeniusStake"
+key_prefix = "gens"
+policy_id_hex = "dda5fdb1002f7389b33e036b6afee82a8189becb6cba852e8b79b4fb"
+script_address = "addr1w8r99sv75y9tqfdzkzyqdqhedgnef47w4x7y0qnyts8pznq87e4wh"
+
+[storage]
+type = "Redis"
+connection_params = "redis://localhost:6379"
+
+[chain]
+type = "Mainnet"
+
+[intersect]
+type = "Point"
+value = [ 85041019, "93dd0900b04384c55b634b47fed84cbea9e2d785d133615a9c42dca9dc7df5e0" ]
+
+# Decide what to do here on real deployment
+[policy]
+missing_data = "Skip"
