@@ -5,8 +5,8 @@ min_depth = 1
 
 [[reducers]]
 type = "BalanceByAddress"
-key_prefix = "afc910d7a306d20c12903979d4935ae4307241d03245743548e76783"
-policy_id_hex = "afc910d7a306d20c12903979d4935ae4307241d03245743548e76783"
+key_prefix = "c0572f12a92486540cc7454ce9016cba322ff47722bc85637372c31e"
+policy_id_hex = "c0572f12a92486540cc7454ce9016cba322ff47722bc85637372c31e"
 
 [storage]
 type = "Postgres"
