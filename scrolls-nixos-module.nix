@@ -57,7 +57,7 @@ with lib;
       (name: conf: nameValuePair (scrollsName name) {
         enable = true;
         description = "Scrolls - ${scrollsName name}";
-        after = [ "postgres.service" ];
+        after = [ "postgresql.service" ];
         wantedBy = [ "multi-user.target" ];
 
         script = escapeShellArgs (concatLists [
