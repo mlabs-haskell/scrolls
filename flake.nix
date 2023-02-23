@@ -54,6 +54,7 @@
               pkgs.rust-analyzer
               pkgs.docker-compose
               pkgs.redis
+              pkgs.postgresql
             ];
           };
 

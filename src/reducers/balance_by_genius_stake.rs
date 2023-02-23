@@ -1,21 +1,23 @@
+use pallas::codec::utils::CborWrap;
 use pallas::crypto::hash::Hash;
-use std::collections::HashMap;
+use pallas::ledger::addresses::{
+    Address, Network, ShelleyAddress, ShelleyDelegationPart, ShelleyPaymentPart,
+};
+use pallas::ledger::primitives::alonzo::{Constr, PlutusData};
+use pallas::ledger::primitives::babbage::DatumOption;
 use pallas::ledger::traverse::ComputeHash;
 use pallas::ledger::traverse::MultiEraOutput;
 use pallas::ledger::traverse::{Asset, MultiEraBlock, OutputRef};
 use pallas::network::miniprotocols::Point;
-use pallas::ledger::primitives::babbage::DatumOption;
-use pallas::ledger::primitives::alonzo::{PlutusData, Constr};
-use pallas::ledger::addresses::{ShelleyAddress, ShelleyPaymentPart, Network, Address, ShelleyDelegationPart};
-use std::ops::Deref;
-use pallas::codec::utils::CborWrap;
 use serde::Deserialize;
+use std::collections::HashMap;
+use std::ops::Deref;
 
 use crate::{crosscut, model, prelude::*};
 
 #[derive(Deserialize)]
 pub struct Config {
-    pub key_prefix: Option<String>,
+    pub key_prefix: String,
     pub filter: Option<crosscut::filters::Predicate>,
     pub policy_id_hex: Option<String>,
     pub script_address: String,
@@ -27,7 +29,7 @@ pub struct Reducer {
 }
 
 impl Reducer {
-    fn get_native (asset: &Asset) -> Option<(&Hash<28>, &Vec<u8>, &u64)> {
+    fn get_native(asset: &Asset) -> Option<(&Hash<28>, &Vec<u8>, &u64)> {
         match asset {
             Asset::Ada(..) => None,
             Asset::NativeAsset(cs, tn, amt) => Some((cs, tn, amt)),
@@ -56,7 +58,7 @@ impl Reducer {
         let addr_constr = get_constr(addr_field)?;
 
         // Spending
-        
+
         let spending_field = addr_constr.fields.get(0)?;
         let spending_constr = get_constr(spending_field)?;
 
@@ -64,7 +66,7 @@ impl Reducer {
         let spending_part = mk_pub_key_spend_part(spending_bytes.clone())?;
 
         // Staking
-        
+
         let maybe_staking_field = addr_constr.fields.get(1)?;
         let maybe_staking_constr = get_constr(maybe_staking_field)?;
 
@@ -96,16 +98,14 @@ impl Reducer {
             Some(x) => x,
             None => return Ok(()),
         };
-        
+
         let address = utxo.address().map(|addr| addr.to_string()).or_panic()?;
         if self.config.script_address != address {
             return Ok(());
         }
 
         let owner = match utxo.datum() {
-            Some(DatumOption::Data(CborWrap(datum))) => {
-                Self::datum_to_address(&datum)
-            }
+            Some(DatumOption::Data(CborWrap(datum))) => Self::datum_to_address(&datum),
             Some(DatumOption::Hash(hash)) => {
                 let datums = get_datums(block);
                 let datum = datums.get(&hash);
@@ -113,22 +113,21 @@ impl Reducer {
                     Some(datum) => Self::datum_to_address(datum),
                     None => None,
                 }
-            },
+            }
             None => None,
         };
         log::debug!("Found Genius stake owner: {:?}", owner);
-        
+
         match owner {
             Some(address) => {
                 let owner = address.to_string();
-                let key = match &self.config.key_prefix {
-                    Some(prefix) => format!("{}.{}", prefix, owner),
-                    None => format!("{}.{}", "balance_by_genius_stake".to_string(), owner),
-                };
-                
+
+                let prefix = self.config.key_prefix.clone();
+
                 let delta = self.get_tokens_amount(&utxo);
                 if delta != 0 {
-                    let crdt = model::CRDTCommand::voting_power_change(key, -1 * delta, point);
+                    let crdt =
+                        model::CRDTCommand::voting_power_change(owner, prefix, -1 * delta, point);
                     output.send(gasket::messaging::Message::from(crdt))?;
                 }
                 return Ok(());
@@ -146,16 +145,17 @@ impl Reducer {
         output: &mut super::OutputPort,
     ) -> Result<(), gasket::error::Error> {
         let point = Point::Specific(block.slot(), block.hash().to_vec());
-        
-        let address = tx_output.address().map(|addr| addr.to_string()).or_panic()?;
+
+        let address = tx_output
+            .address()
+            .map(|addr| addr.to_string())
+            .or_panic()?;
         if self.config.script_address != address {
             return Ok(());
         }
-        
+
         let owner = match tx_output.datum() {
-            Some(DatumOption::Data(CborWrap(datum))) => {
-                Self::datum_to_address(&datum)
-            }
+            Some(DatumOption::Data(CborWrap(datum))) => Self::datum_to_address(&datum),
             Some(DatumOption::Hash(hash)) => {
                 let datums = get_datums(block);
                 let datum = datums.get(&hash);
@@ -163,25 +163,22 @@ impl Reducer {
                     Some(datum) => Self::datum_to_address(datum),
                     None => None,
                 }
-            },
+            }
             None => None,
         };
         log::warn!("Found Genius stake owner: {:?}", owner);
         match owner {
             Some(address) => {
                 let owner = address.to_string();
-        
-                let key = match &self.config.key_prefix {
-                    Some(prefix) => format!("{}.{}", prefix, owner),
-                    None => format!("{}.{}", "balance_by_genius_stake".to_string(), owner),
-                };
+
+                let prefix = self.config.key_prefix.clone();
 
                 let delta = self.get_tokens_amount(&tx_output);
                 if delta != 0 {
-                    let crdt = model::CRDTCommand::voting_power_change(key, delta, point);
+                    let crdt = model::CRDTCommand::voting_power_change(owner, prefix, delta, point);
                     output.send(gasket::messaging::Message::from(crdt))?;
                 }
-            },
+            }
             None => {}
         }
         Ok(())
@@ -222,8 +219,7 @@ impl Config {
 
 fn get_datums(block: &MultiEraBlock) -> HashMap<Hash<32>, PlutusData> {
     let witnesses: Vec<PlutusData> = match &block {
-        MultiEraBlock::Babbage(babbage) => 
-            babbage
+        MultiEraBlock::Babbage(babbage) => babbage
             .transaction_witness_sets
             .iter()
             .map(|w| w.clone().unwrap())
@@ -231,8 +227,7 @@ fn get_datums(block: &MultiEraBlock) -> HashMap<Hash<32>, PlutusData> {
             .flat_map(|w| w)
             .map(|w| w.unwrap())
             .collect(),
-        MultiEraBlock::AlonzoCompatible(alonzo, _) =>
-            alonzo
+        MultiEraBlock::AlonzoCompatible(alonzo, _) => alonzo
             .transaction_witness_sets
             .iter()
             .map(|w| w.clone().unwrap())

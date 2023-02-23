@@ -9,9 +9,9 @@ use crate::{bootstrap, crosscut, model};
 type InputPort = gasket::messaging::TwoPhaseInputPort<model::EnrichedBlockPayload>;
 type OutputPort = gasket::messaging::OutputPort<model::CRDTCommand>;
 
-pub mod macros;
 pub mod balance_by_address;
 pub mod balance_by_genius_stake;
+pub mod macros;
 mod worker;
 
 #[derive(Deserialize)]

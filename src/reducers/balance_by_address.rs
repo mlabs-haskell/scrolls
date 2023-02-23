@@ -8,7 +8,7 @@ use crate::{crosscut, model, prelude::*};
 
 #[derive(Deserialize)]
 pub struct Config {
-    pub key_prefix: Option<String>,
+    pub key_prefix: String,
     pub filter: Option<crosscut::filters::Predicate>,
     pub policy_id_hex: Option<String>,
 }
@@ -19,7 +19,7 @@ pub struct Reducer {
 }
 
 impl Reducer {
-    fn get_native (asset: &Asset) -> Option<(&Hash<28>, &Vec<u8>, &u64)> {
+    fn get_native(asset: &Asset) -> Option<(&Hash<28>, &Vec<u8>, &u64)> {
         match asset {
             Asset::Ada(..) => None,
             Asset::NativeAsset(cs, tn, amt) => Some((cs, tn, amt)),
@@ -56,14 +56,11 @@ impl Reducer {
 
         let address = utxo.address().map(|addr| addr.to_string()).or_panic()?;
 
-        let key = match &self.config.key_prefix {
-            Some(prefix) => format!("{}.{}", prefix, address),
-            None => format!("{}.{}", "balance_by_address".to_string(), address),
-        };
+        let prefix = self.config.key_prefix.clone();
 
         let delta = self.get_tokens_amount(&utxo);
         if delta != 0 {
-            let crdt = model::CRDTCommand::voting_power_change(key, -1 * delta, point);
+            let crdt = model::CRDTCommand::voting_power_change(address, prefix, -1 * delta, point);
             output.send(gasket::messaging::Message::from(crdt))?;
         }
 
@@ -79,14 +76,11 @@ impl Reducer {
         let point = Point::Specific(block.slot(), block.hash().to_vec());
         let address = tx_output.address().map(|x| x.to_string()).or_panic()?;
 
-        let key = match &self.config.key_prefix {
-            Some(prefix) => format!("{}.{}", prefix, address),
-            None => format!("{}.{}", "balance_by_address".to_string(), address),
-        };
+        let prefix = self.config.key_prefix.clone();
 
         let delta = self.get_tokens_amount(&tx_output);
         if delta != 0 {
-            let crdt = model::CRDTCommand::voting_power_change(key, delta, point);
+            let crdt = model::CRDTCommand::voting_power_change(address, prefix, delta, point);
             output.send(gasket::messaging::Message::from(crdt))?;
         }
 

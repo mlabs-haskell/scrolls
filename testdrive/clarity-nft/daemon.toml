@@ -1,7 +1,7 @@
 [source]
 type = "N2N"
 address = "relay1.nordicpool.org:3005"
-min_depth = 32
+min_depth = 1
 
 [[reducers]]
 type = "BalanceByAddress"
@@ -9,15 +9,15 @@ key_prefix = "afc910d7a306d20c12903979d4935ae4307241d03245743548e76783"
 policy_id_hex = "afc910d7a306d20c12903979d4935ae4307241d03245743548e76783"
 
 [storage]
-type = "Redis"
-connection_params = "redis://localhost:6379"
+type = "Postgres"
+connection_params = "postgresql://scrolls@localhost/scrolls"
 
 [chain]
 type = "Mainnet"
 
 [intersect]
 type = "Point"
-value = [ 45258451, "bac71971040cf343519c0043501294450548a13465bf0d9f429d1f31aebdad49" ]
+value = [ 67305077, "55c5a9ff1f292aa77046f6f4f95be25173444c2e52998245c7f6e0f2d8e40804" ]
 
 # Decide what to do here on real deployment
 [policy]

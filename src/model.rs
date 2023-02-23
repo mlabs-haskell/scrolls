@@ -59,7 +59,7 @@ impl BlockContext {
             .consumes()
             .iter()
             .map(|i| i.output_ref())
-            .map(|r| self.find_utxo(&r).map(|u| (r,u)))
+            .map(|r| self.find_utxo(&r).map(|u| (r, u)))
             .map(|r| r.apply_policy(policy))
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
@@ -92,7 +92,8 @@ impl EnrichedBlockPayload {
 
 pub type Set = String;
 pub type Member = String;
-pub type Key = String;
+pub type Address = String;
+pub type PolicyId = String;
 pub type Delta = i64;
 pub type Timestamp = u64;
 
@@ -126,7 +127,7 @@ impl From<serde_json::Value> for Value {
 #[non_exhaustive]
 pub enum CRDTCommand {
     BlockStarting(Point),
-    VotingPowerChange(Key, Delta, Point),
+    VotingPowerChange(Address, PolicyId, Delta, Point),
     BlockFinished(Point),
 }
 
@@ -138,8 +139,13 @@ impl CRDTCommand {
         CRDTCommand::BlockStarting(point)
     }
 
-    pub fn voting_power_change(key: Key, delta: Delta, point: Point) -> CRDTCommand {
-        CRDTCommand::VotingPowerChange(key, delta, point)
+    pub fn voting_power_change(
+        address: Address,
+        policy: PolicyId,
+        delta: Delta,
+        point: Point,
+    ) -> CRDTCommand {
+        CRDTCommand::VotingPowerChange(address, policy, delta, point)
     }
 
     pub fn block_finished(block: &MultiEraBlock) -> CRDTCommand {
