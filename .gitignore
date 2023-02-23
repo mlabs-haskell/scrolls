@@ -16,3 +16,7 @@
 result
 TODO.txt
 /.direnv/
+/db/
+/dump.rdb
+/logfile
+/.pre-commit-config.yaml

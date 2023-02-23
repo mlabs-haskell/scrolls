@@ -129,6 +129,7 @@ pub enum CRDTCommand {
     BlockStarting(Point),
     VotingPowerChange(Address, PolicyId, Delta, Point),
     BlockFinished(Point),
+    RollBack(Point),
 }
 
 impl CRDTCommand {
@@ -153,5 +154,9 @@ impl CRDTCommand {
         let slot = block.slot();
         let point = Point::Specific(slot, hash.to_vec());
         CRDTCommand::BlockFinished(point)
+    }
+
+    pub fn rollback(point: Point) -> CRDTCommand {
+        CRDTCommand::RollBack(point)
     }
 }

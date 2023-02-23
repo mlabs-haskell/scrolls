@@ -40,13 +40,6 @@ with lib;
             description = "Path to config .toml file";
             type = path;
           };
-
-          redisService = mkOption {
-            # See: https://github.com/NixOS/nixpkgs/blob/nixos-22.11/nixos/modules/services/databases/redis.nix#L18
-            description = "Name of redis target required to run";
-            type = str;
-            default = "redis";
-          };
         };
       }));
     };
@@ -64,7 +57,7 @@ with lib;
       (name: conf: nameValuePair (scrollsName name) {
         enable = true;
         description = "Scrolls - ${scrollsName name}";
-        after = [ "${conf.redisService}.service" ];
+        after = [ "postgres.service" ];
         wantedBy = [ "multi-user.target" ];
 
         script = escapeShellArgs (concatLists [

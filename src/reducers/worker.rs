@@ -1,4 +1,5 @@
 use pallas::ledger::traverse::MultiEraBlock;
+use pallas::network::miniprotocols::Point;
 
 use crate::{crosscut, model, prelude::*};
 
@@ -65,6 +66,14 @@ impl Worker {
 
         Ok(())
     }
+
+    fn rollback(&mut self, point: Point) -> Result<(), gasket::error::Error> {
+        self.output.send(gasket::messaging::Message::from(
+            model::CRDTCommand::rollback(point),
+        ))?;
+
+        Ok(())
+    }
 }
 
 impl gasket::runtime::Worker for Worker {
@@ -84,6 +93,7 @@ impl gasket::runtime::Worker for Worker {
             }
             model::EnrichedBlockPayload::RollBack(point) => {
                 log::warn!("rollback requested for {:?}", point);
+                self.rollback(point)?;
             }
         }
 

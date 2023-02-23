@@ -102,6 +102,9 @@ impl gasket::runtime::Worker for Worker {
                 let mut last_point = self.last_point.lock().unwrap();
                 *last_point = Some(crosscut::PointArg::from(point));
             }
+            model::CRDTCommand::RollBack(point) => {
+                log::debug!("rollback to {:?}", point);
+            }
         };
 
         self.ops_count.inc(1);

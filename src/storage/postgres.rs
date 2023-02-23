@@ -148,7 +148,7 @@ impl gasket::runtime::Worker for Worker {
                     address  TEXT NOT NULL,
                     policy   TEXT NOT NULL,
                     delta    BIGINT NOT NULL,
-                    slot     BIGINT NOT NULL REFERENCES cursor
+                    slot     BIGINT NOT NULL REFERENCES cursor ON DELETE CASCADE
                 );
             ",
             )
@@ -187,6 +187,17 @@ impl gasket::runtime::Worker for Worker {
                     .or_restart()?;
             }
             model::CRDTCommand::VotingPowerChange(_, _, _, Point::Origin) => {}
+            model::CRDTCommand::RollBack(point) => {
+                let slot = match point {
+                    Point::Specific(slot, _) => slot,
+                    Point::Origin => 0,
+                };
+                self.connection
+                    .as_mut()
+                    .unwrap()
+                    .execute("DELETE FROM cursor WHERE slot > $1", &[&(slot as i64)])
+                    .or_restart()?;
+            }
         };
         self.ops_count.inc(1);
         self.input.commit();

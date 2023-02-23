@@ -22,6 +22,10 @@
         if builtins.hasAttr "currentSystem" builtins
         then [ builtins.currentSystem ]
         else inputs.nixpkgs.lib.systems.flakeExposed;
+      imports = [
+        inputs.pre-commit-hooks-nix.flakeModule
+      ];
+
       flake = {
         herculesCI.ciSystems = [ "x86_64-linux" ];
 
@@ -38,6 +42,13 @@
         , system
         , ...
         }: {
+          pre-commit.settings = {
+            hooks = {
+              rustfmt.enable = true;
+              nixpkgs-fmt.enable = true;
+            };
+          };
+
           packages = {
             scrolls = inputs.crane.lib.${system}.buildPackage {
               src = self;
@@ -46,6 +57,7 @@
           };
 
           devShells.default = pkgs.mkShell {
+            shellHook = config.pre-commit.installationScript;
             nativeBuildInputs = [
               pkgs.cargo
               pkgs.rustc
