@@ -88,45 +88,8 @@ impl gasket::runtime::Worker for Worker {
             model::CRDTCommand::BlockStarting(point) => {
                 log::debug!("block started {:?}", point);
             }
-            model::CRDTCommand::GrowOnlySetAdd(key, value) => {
-                log::debug!("adding to grow-only set [{}], value [{}]", key, value);
-            }
-            model::CRDTCommand::TwoPhaseSetAdd(key, value) => {
-                log::debug!("adding to 2-phase set [{}], value [{}]", key, value);
-            }
-            model::CRDTCommand::TwoPhaseSetRemove(key, value) => {
-                log::debug!("removing from 2-phase set [{}], value [{}]", key, value);
-            }
-            model::CRDTCommand::SetAdd(key, value) => {
-                log::debug!("adding to set [{}], value [{}]", key, value);
-            }
-            model::CRDTCommand::SortedSetAdd(key, value, delta) => {
-                log::debug!(
-                    "adding to set [{}], value [{}], delta [{}]",
-                    key,
-                    value,
-                    delta
-                );
-            }
-            model::CRDTCommand::SortedSetRemove(key, value, delta) => {
-                log::debug!(
-                    "removing from set [{}], value [{}], delta [{}]",
-                    key,
-                    value,
-                    delta
-                );
-            }
-            model::CRDTCommand::SetRemove(key, value) => {
-                log::debug!("removing from set [{}], value [{}]", key, value);
-            }
-            model::CRDTCommand::LastWriteWins(key, _, ts) => {
-                log::debug!("last write for [{}], slot [{}]", key, ts);
-            }
-            model::CRDTCommand::AnyWriteWins(key, _) => {
-                log::debug!("overwrite [{}]", key);
-            }
-            model::CRDTCommand::PNCounter(key, value) => {
-                log::debug!("increasing counter [{}], by [{}]", key, value);
+            model::CRDTCommand::VotingPowerChange(key, value, point) => {
+                log::debug!("changing voting power for [{}], delta [{}], at [{:?}]", key, value, point);
             }
             model::CRDTCommand::BlockFinished(point) => {
                 log::debug!("block finished {:?}", point);

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use pallas::ledger::traverse::ComputeHash;
 use pallas::ledger::traverse::MultiEraOutput;
 use pallas::ledger::traverse::{Asset, MultiEraBlock, OutputRef};
+use pallas::network::miniprotocols::Point;
 use pallas::ledger::primitives::babbage::DatumOption;
 use pallas::ledger::primitives::alonzo::{PlutusData, Constr};
 use pallas::ledger::addresses::{ShelleyAddress, ShelleyPaymentPart, Network, Address, ShelleyDelegationPart};
@@ -88,6 +89,7 @@ impl Reducer {
         input: &OutputRef,
         output: &mut super::OutputPort,
     ) -> Result<(), gasket::error::Error> {
+        let point = Point::Specific(block.slot(), block.hash().to_vec());
         let utxo = ctx.find_utxo(input).apply_policy(&self.policy).or_panic()?;
 
         let utxo = match utxo {
@@ -126,7 +128,7 @@ impl Reducer {
                 
                 let delta = self.get_tokens_amount(&utxo);
                 if delta != 0 {
-                    let crdt = model::CRDTCommand::PNCounter(key, -1 * delta);
+                    let crdt = model::CRDTCommand::voting_power_change(key, -1 * delta, point);
                     output.send(gasket::messaging::Message::from(crdt))?;
                 }
                 return Ok(());
@@ -143,6 +145,8 @@ impl Reducer {
         tx_output: &MultiEraOutput,
         output: &mut super::OutputPort,
     ) -> Result<(), gasket::error::Error> {
+        let point = Point::Specific(block.slot(), block.hash().to_vec());
+        
         let address = tx_output.address().map(|addr| addr.to_string()).or_panic()?;
         if self.config.script_address != address {
             return Ok(());
@@ -174,7 +178,7 @@ impl Reducer {
 
                 let delta = self.get_tokens_amount(&tx_output);
                 if delta != 0 {
-                    let crdt = model::CRDTCommand::PNCounter(key, delta);
+                    let crdt = model::CRDTCommand::voting_power_change(key, delta, point);
                     output.send(gasket::messaging::Message::from(crdt))?;
                 }
             },

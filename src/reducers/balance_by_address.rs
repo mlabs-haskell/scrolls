@@ -1,6 +1,7 @@
 use pallas::crypto::hash::Hash;
 use pallas::ledger::traverse::MultiEraOutput;
 use pallas::ledger::traverse::{Asset, MultiEraBlock, OutputRef};
+use pallas::network::miniprotocols::Point;
 use serde::Deserialize;
 
 use crate::{crosscut, model, prelude::*};
@@ -40,10 +41,12 @@ impl Reducer {
 
     fn process_consumed_txo(
         &mut self,
+        block: &MultiEraBlock,
         ctx: &model::BlockContext,
         input: &OutputRef,
         output: &mut super::OutputPort,
     ) -> Result<(), gasket::error::Error> {
+        let point = Point::Specific(block.slot(), block.hash().to_vec());
         let utxo = ctx.find_utxo(input).apply_policy(&self.policy).or_panic()?;
 
         let utxo = match utxo {
@@ -60,7 +63,7 @@ impl Reducer {
 
         let delta = self.get_tokens_amount(&utxo);
         if delta != 0 {
-            let crdt = model::CRDTCommand::PNCounter(key, -1 * delta);
+            let crdt = model::CRDTCommand::voting_power_change(key, -1 * delta, point);
             output.send(gasket::messaging::Message::from(crdt))?;
         }
 
@@ -69,9 +72,11 @@ impl Reducer {
 
     fn process_produced_txo(
         &mut self,
+        block: &MultiEraBlock,
         tx_output: &MultiEraOutput,
         output: &mut super::OutputPort,
     ) -> Result<(), gasket::error::Error> {
+        let point = Point::Specific(block.slot(), block.hash().to_vec());
         let address = tx_output.address().map(|x| x.to_string()).or_panic()?;
 
         let key = match &self.config.key_prefix {
@@ -81,7 +86,7 @@ impl Reducer {
 
         let delta = self.get_tokens_amount(&tx_output);
         if delta != 0 {
-            let crdt = model::CRDTCommand::PNCounter(key, delta);
+            let crdt = model::CRDTCommand::voting_power_change(key, delta, point);
             output.send(gasket::messaging::Message::from(crdt))?;
         }
 
@@ -97,11 +102,11 @@ impl Reducer {
         for tx in block.txs().into_iter() {
             if filter_matches!(self, block, &tx, ctx) {
                 for consumed in tx.consumes().iter().map(|i| i.output_ref()) {
-                    self.process_consumed_txo(&ctx, &consumed, output)?;
+                    self.process_consumed_txo(block, &ctx, &consumed, output)?;
                 }
 
                 for (_, produced) in tx.produces() {
-                    self.process_produced_txo(&produced, output)?;
+                    self.process_produced_txo(block, &produced, output)?;
                 }
             }
         }
