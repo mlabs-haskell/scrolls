@@ -134,15 +134,7 @@ impl gasket::runtime::Worker for Worker {
                     hash   TEXT NOT NULL,
                     PRIMARY KEY (slot)
                 );
-            ",
-            )
-            .or_restart()?;
 
-        self.connection
-            .as_mut()
-            .unwrap()
-            .batch_execute(
-                "
                 CREATE TABLE IF NOT EXISTS voting_power (
                     id       SERIAL PRIMARY KEY,
                     address  TEXT NOT NULL,
@@ -150,6 +142,9 @@ impl gasket::runtime::Worker for Worker {
                     delta    BIGINT NOT NULL,
                     slot     BIGINT NOT NULL REFERENCES cursor ON DELETE CASCADE
                 );
+
+                CREATE INDEX IF NOT EXISTS voting_power_address_idx ON voting_power (address);
+                CREATE INDEX IF NOT EXISTS voting_power_policy_idx ON voting_power (policy);
             ",
             )
             .or_restart()?;
