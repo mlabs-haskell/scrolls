@@ -1,11 +1,12 @@
 [source]
 type = "N2N"
-address = "relays-new.cardano-mainnet.iohk.io:3001"
+address = "relay1.nordicpool.org:3005"
+min_depth = 32
 
 [[reducers]]
 type = "BalanceByAddress"
-key_prefix = "c0572f12a92486540cc7454ce9016cba322ff47722bc85637372c31e"
-policy_id_hex = "c0572f12a92486540cc7454ce9016cba322ff47722bc85637372c31e"
+key_prefix = "afc910d7a306d20c12903979d4935ae4307241d03245743548e76783"
+policy_id_hex = "afc910d7a306d20c12903979d4935ae4307241d03245743548e76783"
 
 [storage]
 type = "Redis"
@@ -14,14 +15,9 @@ connection_params = "redis://localhost:6379"
 [chain]
 type = "Mainnet"
 
-# https://cexplorer.io/block/55c5a9ff1f292aa77046f6f4f95be25173444c2e52998245c7f6e0f2d8e40804
-# First Clarity NFT mint by Logan
 [intersect]
 type = "Point"
-value = [
-    67305077,
-    "55c5a9ff1f292aa77046f6f4f95be25173444c2e52998245c7f6e0f2d8e40804",
-]
+value = [ 45258451, "bac71971040cf343519c0043501294450548a13465bf0d9f429d1f31aebdad49" ]
 
 # Decide what to do here on real deployment
 [policy]

@@ -10,63 +10,15 @@ type InputPort = gasket::messaging::TwoPhaseInputPort<model::EnrichedBlockPayloa
 type OutputPort = gasket::messaging::OutputPort<model::CRDTCommand>;
 
 pub mod macros;
-pub mod point_by_tx;
-pub mod pool_by_stake;
-pub mod utxo_by_address;
 pub mod balance_by_address;
 pub mod balance_by_genius_stake;
 mod worker;
 
-#[cfg(feature = "unstable")]
-pub mod address_by_asset;
-#[cfg(feature = "unstable")]
-pub mod address_by_txo;
-#[cfg(feature = "unstable")]
-pub mod asset_holders_by_asset_id;
-#[cfg(feature = "unstable")]
-pub mod block_header_by_hash;
-#[cfg(feature = "unstable")]
-pub mod last_block_parameters;
-#[cfg(feature = "unstable")]
-pub mod tx_by_hash;
-#[cfg(feature = "unstable")]
-pub mod tx_count_by_address;
-#[cfg(feature = "unstable")]
-pub mod tx_count_by_native_token_policy_id;
-#[cfg(feature = "unstable")]
-pub mod utxos_by_asset;
-#[cfg(feature = "unstable")]
-pub mod utxos_by_stake;
-
 #[derive(Deserialize)]
 #[serde(tag = "type")]
 pub enum Config {
-    UtxoByAddress(utxo_by_address::Config),
-    PointByTx(point_by_tx::Config),
-    PoolByStake(pool_by_stake::Config),
     BalanceByAddress(balance_by_address::Config),
     BalanceByGeniusStake(balance_by_genius_stake::Config),
-
-    #[cfg(feature = "unstable")]
-    AddressByTxo(address_by_txo::Config),
-    #[cfg(feature = "unstable")]
-    TxByHash(tx_by_hash::Config),
-    #[cfg(feature = "unstable")]
-    TxCountByAddress(tx_count_by_address::Config),
-    #[cfg(feature = "unstable")]
-    BlockHeaderByHash(block_header_by_hash::Config),
-    #[cfg(feature = "unstable")]
-    AddressByAsset(address_by_asset::Config),
-    #[cfg(feature = "unstable")]
-    LastBlockParameters(last_block_parameters::Config),
-    #[cfg(feature = "unstable")]
-    TxCountByNativeTokenPolicyId(tx_count_by_native_token_policy_id::Config),
-    #[cfg(feature = "unstable")]
-    AssetHoldersByAsset(asset_holders_by_asset_id::Config),
-    #[cfg(feature = "unstable")]
-    UtxosByAsset(utxos_by_asset::Config),
-    #[cfg(feature = "unstable")]
-    UtxoByStake(utxo_by_stake::Config),
 }
 
 impl Config {
@@ -76,32 +28,8 @@ impl Config {
         policy: &crosscut::policies::RuntimePolicy,
     ) -> Reducer {
         match self {
-            Config::UtxoByAddress(c) => c.plugin(policy),
-            Config::PointByTx(c) => c.plugin(),
-            Config::PoolByStake(c) => c.plugin(),
             Config::BalanceByAddress(c) => c.plugin(policy),
             Config::BalanceByGeniusStake(c) => c.plugin(policy),
-
-            #[cfg(feature = "unstable")]
-            Config::AddressByTxo(c) => c.plugin(policy),
-            #[cfg(feature = "unstable")]
-            Config::TxByHash(c) => c.plugin(policy),
-            #[cfg(feature = "unstable")]
-            Config::TxCountByAddress(c) => c.plugin(policy),
-            #[cfg(feature = "unstable")]
-            Config::BlockHeaderByHash(c) => c.plugin(policy),
-            #[cfg(feature = "unstable")]
-            Config::AddressByAsset(c) => c.plugin(),
-            #[cfg(feature = "unstable")]
-            Config::LastBlockParameters(c) => c.plugin(chain),
-            #[cfg(feature = "unstable")]
-            Config::TxCountByNativeTokenPolicyId(c) => c.plugin(chain),
-            #[cfg(feature = "unstable")]
-            Config::AssetHoldersByAsset(c) => c.plugin(chain, policy),
-            #[cfg(feature = "unstable")]
-            Config::UtxosByAsset(c) => c.plugin(policy),
-            #[cfg(feature = "unstable")]
-            Config::UtxoByStake(c) => c.plugin(policy),
         }
     }
 }
@@ -152,32 +80,8 @@ impl Bootstrapper {
 }
 
 pub enum Reducer {
-    UtxoByAddress(utxo_by_address::Reducer),
-    PointByTx(point_by_tx::Reducer),
-    PoolByStake(pool_by_stake::Reducer),
     BalanceByAddress(balance_by_address::Reducer),
     BalanceByGeniusStake(balance_by_genius_stake::Reducer),
-
-    #[cfg(feature = "unstable")]
-    AddressByTxo(address_by_txo::Reducer),
-    #[cfg(feature = "unstable")]
-    TxByHash(tx_by_hash::Reducer),
-    #[cfg(feature = "unstable")]
-    TxCountByAddress(tx_count_by_address::Reducer),
-    #[cfg(feature = "unstable")]
-    BlockHeaderByHash(block_header_by_hash::Reducer),
-    #[cfg(feature = "unstable")]
-    AddressByAsset(address_by_asset::Reducer),
-    #[cfg(feature = "unstable")]
-    LastBlockParameters(last_block_parameters::Reducer),
-    #[cfg(feature = "unstable")]
-    TxCountByNativeTokenPolicyId(tx_count_by_native_token_policy_id::Reducer),
-    #[cfg(feature = "unstable")]
-    AssetHoldersByAssetId(asset_holders_by_asset_id::Reducer),
-    #[cfg(feature = "unstable")]
-    UtxosByAsset(utxos_by_asset::Reducer),
-    #[cfg(feature = "unstable")]
-    UtxoByStake(utxo_by_stake::Reducer),
 }
 
 impl Reducer {
@@ -188,32 +92,8 @@ impl Reducer {
         output: &mut OutputPort,
     ) -> Result<(), gasket::error::Error> {
         match self {
-            Reducer::UtxoByAddress(x) => x.reduce_block(block, ctx, output),
-            Reducer::PointByTx(x) => x.reduce_block(block, output),
-            Reducer::PoolByStake(x) => x.reduce_block(block, output),
             Reducer::BalanceByAddress(x) => x.reduce_block(block, ctx, output),
             Reducer::BalanceByGeniusStake(x) => x.reduce_block(block, ctx, output),
-
-            #[cfg(feature = "unstable")]
-            Reducer::AddressByTxo(x) => x.reduce_block(block, ctx, output),
-            #[cfg(feature = "unstable")]
-            Reducer::TxByHash(x) => x.reduce_block(block, ctx, output),
-            #[cfg(feature = "unstable")]
-            Reducer::TxCountByAddress(x) => x.reduce_block(block, ctx, output),
-            #[cfg(feature = "unstable")]
-            Reducer::BlockHeaderByHash(x) => x.reduce_block(block, ctx, output),
-            #[cfg(feature = "unstable")]
-            Reducer::AddressByAsset(x) => x.reduce_block(block, ctx, output),
-            #[cfg(feature = "unstable")]
-            Reducer::LastBlockParameters(x) => x.reduce_block(block, output),
-            #[cfg(feature = "unstable")]
-            Reducer::TxCountByNativeTokenPolicyId(x) => x.reduce_block(block, output),
-            #[cfg(feature = "unstable")]
-            Reducer::AssetHoldersByAssetId(x) => x.reduce_block(block, ctx, output),
-            #[cfg(feature = "unstable")]
-            Reducer::UtxosByAsset(x) => x.reduce_block(block, ctx, output),
-            #[cfg(feature = "unstable")]
-            Reducer::UtxoByStake(x) => x.reduce_block(block, ctx, output),
         }
     }
 }
