@@ -74,6 +74,8 @@ with lib;
           User = conf.user;
           Group = conf.user;
           Restart = "always";
+          RuntimeDirectory = scrollsName name;
+          StateDirectory = scrollsName name;
           # TODO: Finish it
         };
       })

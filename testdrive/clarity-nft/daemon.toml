@@ -3,6 +3,10 @@ type = "N2N"
 address = "relay1.nordicpool.org:3005"
 min_depth = 1
 
+[enrich]
+type = "Sled"
+db_path = "sled_db"
+
 [[reducers]]
 type = "BalanceByAddress"
 key_prefix = "c0572f12a92486540cc7454ce9016cba322ff47722bc85637372c31e"
