@@ -20,3 +20,4 @@ TODO.txt
 /dump.rdb
 /logfile
 /.pre-commit-config.yaml
+/sled_db/
