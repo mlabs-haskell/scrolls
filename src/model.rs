@@ -1,3 +1,4 @@
+use pallas::ledger::addresses::ShelleyAddress;
 use std::{collections::HashMap, fmt::Debug};
 
 use pallas::{
@@ -92,7 +93,6 @@ impl EnrichedBlockPayload {
 
 pub type Set = String;
 pub type Member = String;
-pub type Address = String;
 pub type PolicyId = String;
 pub type Delta = i64;
 pub type Timestamp = u64;
@@ -127,7 +127,7 @@ impl From<serde_json::Value> for Value {
 #[non_exhaustive]
 pub enum CRDTCommand {
     BlockStarting(Point),
-    VotingPowerChange(Address, PolicyId, Delta, Point),
+    VotingPowerChange(ShelleyAddress, PolicyId, Delta, Point),
     BlockFinished(Point),
     RollBack(Point),
 }
@@ -141,7 +141,7 @@ impl CRDTCommand {
     }
 
     pub fn voting_power_change(
-        address: Address,
+        address: ShelleyAddress,
         policy: PolicyId,
         delta: Delta,
         point: Point,

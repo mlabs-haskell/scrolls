@@ -90,7 +90,7 @@ impl gasket::runtime::Worker for Worker {
             }
             model::CRDTCommand::VotingPowerChange(address, policy, value, point) => {
                 log::debug!(
-                    "changing voting power of [{}] for [{}], delta [{}], at [{:?}]",
+                    "changing voting power of [{}] for [{:?}], delta [{}], at [{:?}]",
                     policy,
                     address,
                     value,

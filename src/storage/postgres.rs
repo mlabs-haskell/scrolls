@@ -137,13 +137,15 @@ impl gasket::runtime::Worker for Worker {
 
                 CREATE TABLE IF NOT EXISTS voting_power (
                     id       SERIAL PRIMARY KEY,
-                    address  TEXT NOT NULL,
+                    spending TEXT NOT NULL,
+                    staking  TEXT NOT NULL,
                     policy   TEXT NOT NULL,
                     delta    BIGINT NOT NULL,
                     slot     BIGINT NOT NULL REFERENCES cursor ON DELETE CASCADE
                 );
 
-                CREATE INDEX IF NOT EXISTS voting_power_address_idx ON voting_power (address);
+                CREATE INDEX IF NOT EXISTS voting_power_spending_idx ON voting_power (spending);
+                CREATE INDEX IF NOT EXISTS voting_power_staking_idx ON voting_power (staking);
                 CREATE INDEX IF NOT EXISTS voting_power_policy_idx ON voting_power (policy);
             ",
             )
@@ -174,11 +176,14 @@ impl gasket::runtime::Worker for Worker {
                 delta,
                 Point::Specific(slot, _hash),
             ) => {
+                let spending = address.payment().to_hex();
+                let staking = address.delegation().to_hex();
+
                 self.connection
                     .as_mut()
                     .unwrap()
-                    .execute("INSERT INTO voting_power (address, policy, delta, slot) VALUES ($1, $2, $3, $4)"
-                             , &[&address, &policy, &delta, &(slot as i64)])
+                    .execute("INSERT INTO voting_power (spending, staking, policy, delta, slot) VALUES ($1, $2, $3, $4, $5)"
+                             , &[&spending, &staking, &policy, &delta, &(slot as i64)])
                     .or_restart()?;
             }
             model::CRDTCommand::VotingPowerChange(_, _, _, Point::Origin) => {}

@@ -1,4 +1,5 @@
 use pallas::crypto::hash::Hash;
+use pallas::ledger::addresses::Address;
 use pallas::ledger::traverse::MultiEraOutput;
 use pallas::ledger::traverse::{Asset, MultiEraBlock, OutputRef};
 use pallas::network::miniprotocols::Point;
@@ -54,7 +55,10 @@ impl Reducer {
             None => return Ok(()),
         };
 
-        let address = utxo.address().map(|addr| addr.to_string()).or_panic()?;
+        let address = match utxo.address().or_panic()? {
+            Address::Shelley(x) => x,
+            _ => return Ok(()),
+        };
 
         let prefix = self.config.key_prefix.clone();
 
@@ -74,7 +78,10 @@ impl Reducer {
         output: &mut super::OutputPort,
     ) -> Result<(), gasket::error::Error> {
         let point = Point::Specific(block.slot(), block.hash().to_vec());
-        let address = tx_output.address().map(|x| x.to_string()).or_panic()?;
+        let address = match tx_output.address().or_panic()? {
+            Address::Shelley(x) => x,
+            _ => return Ok(()),
+        };
 
         let prefix = self.config.key_prefix.clone();
 

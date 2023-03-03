@@ -1,7 +1,7 @@
 use pallas::codec::utils::CborWrap;
 use pallas::crypto::hash::Hash;
 use pallas::ledger::addresses::{
-    Address, Network, ShelleyAddress, ShelleyDelegationPart, ShelleyPaymentPart,
+    Network, ShelleyAddress, ShelleyDelegationPart, ShelleyPaymentPart,
 };
 use pallas::ledger::primitives::alonzo::{Constr, PlutusData};
 use pallas::ledger::primitives::babbage::DatumOption;
@@ -50,7 +50,7 @@ impl Reducer {
     }
 
     // VERY naive
-    fn datum_to_address(datum: &PlutusData) -> Option<Address> {
+    fn datum_to_address(datum: &PlutusData) -> Option<ShelleyAddress> {
         let fields = get_constr(datum)?;
         // TODO: Check constr tags
 
@@ -81,7 +81,7 @@ impl Reducer {
 
         // TODO: Don't hardcode network id
         let addr = ShelleyAddress::new(Network::Mainnet, spending_part, stakeing_part);
-        Some(Address::Shelley(addr))
+        Some(addr)
     }
 
     fn process_consumed_txo(
@@ -119,9 +119,7 @@ impl Reducer {
         log::debug!("Found Genius stake owner: {:?}", owner);
 
         match owner {
-            Some(address) => {
-                let owner = address.to_string();
-
+            Some(owner) => {
                 let prefix = self.config.key_prefix.clone();
 
                 let delta = self.get_tokens_amount(&utxo);
@@ -168,9 +166,7 @@ impl Reducer {
         };
         log::warn!("Found Genius stake owner: {:?}", owner);
         match owner {
-            Some(address) => {
-                let owner = address.to_string();
-
+            Some(owner) => {
                 let prefix = self.config.key_prefix.clone();
 
                 let delta = self.get_tokens_amount(&tx_output);
