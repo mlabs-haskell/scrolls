@@ -121,7 +121,7 @@ impl gasket::runtime::Worker for Worker {
             self.config.connection_params.clone().as_str(),
             postgres::NoTls,
         )
-        .or_restart()?;
+        .or_panic()?;
         self.connection = Some(connection);
 
         self.connection
@@ -149,7 +149,7 @@ impl gasket::runtime::Worker for Worker {
                 CREATE INDEX IF NOT EXISTS voting_power_policy_idx ON voting_power (policy);
             ",
             )
-            .or_restart()?;
+            .or_panic()?;
 
         Ok(())
     }
@@ -158,6 +158,7 @@ impl gasket::runtime::Worker for Worker {
         let msg = self.input.recv_or_idle()?;
         match msg.payload {
             model::CRDTCommand::BlockStarting(Point::Specific(slot, hash)) => {
+                log::debug!("block started {:?}", slot);
                 let hash_str = hex::encode(hash);
                 self.connection
                     .as_mut()
@@ -166,7 +167,7 @@ impl gasket::runtime::Worker for Worker {
                         "INSERT INTO cursor (slot, hash) VALUES ($1, $2)",
                         &[&(slot as i64), &hash_str],
                     )
-                    .or_restart()?;
+                    .or_panic()?;
             }
             model::CRDTCommand::BlockStarting(Point::Origin) => {}
             model::CRDTCommand::BlockFinished(_) => {}
@@ -184,7 +185,7 @@ impl gasket::runtime::Worker for Worker {
                     .unwrap()
                     .execute("INSERT INTO voting_power (spending, staking, policy, delta, slot) VALUES ($1, $2, $3, $4, $5)"
                              , &[&spending, &staking, &policy, &delta, &(slot as i64)])
-                    .or_restart()?;
+                    .or_panic()?;
             }
             model::CRDTCommand::VotingPowerChange(_, _, _, Point::Origin) => {}
             model::CRDTCommand::RollBack(point) => {
@@ -196,7 +197,7 @@ impl gasket::runtime::Worker for Worker {
                     .as_mut()
                     .unwrap()
                     .execute("DELETE FROM cursor WHERE slot > $1", &[&(slot as i64)])
-                    .or_restart()?;
+                    .or_panic()?;
             }
         };
         self.ops_count.inc(1);
