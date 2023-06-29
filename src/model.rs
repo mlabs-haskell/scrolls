@@ -94,7 +94,7 @@ impl EnrichedBlockPayload {
 pub type Set = String;
 pub type Member = String;
 pub type PolicyId = String;
-pub type Delta = i64;
+pub type TokenName = String;
 pub type Timestamp = u64;
 
 #[derive(Clone, Debug)]
@@ -127,7 +127,20 @@ impl From<serde_json::Value> for Value {
 #[non_exhaustive]
 pub enum CRDTCommand {
     BlockStarting(Point),
-    VotingPowerChange(ShelleyAddress, PolicyId, Delta, Point),
+    VotingPowerCreated {
+        owner: ShelleyAddress,
+        policy: PolicyId,
+        name: TokenName,
+        amount: u64,
+        point: Point,
+        tx_id: String,
+        tx_idx: usize,
+    },
+    VotingPowerSpent {
+        tx_id: String,
+        tx_idx: usize,
+        point: Point,
+    },
     BlockFinished(Point),
     RollBack(Point),
 }
@@ -138,15 +151,6 @@ impl CRDTCommand {
         let slot = block.slot();
         let point = Point::Specific(slot, hash.to_vec());
         CRDTCommand::BlockStarting(point)
-    }
-
-    pub fn voting_power_change(
-        address: ShelleyAddress,
-        policy: PolicyId,
-        delta: Delta,
-        point: Point,
-    ) -> CRDTCommand {
-        CRDTCommand::VotingPowerChange(address, policy, delta, point)
     }
 
     pub fn block_finished(block: &MultiEraBlock) -> CRDTCommand {

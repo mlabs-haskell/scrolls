@@ -1,3 +1,4 @@
+use hex::ToHex;
 use pallas::crypto::hash::Hash;
 use pallas::ledger::addresses::Address;
 use pallas::ledger::traverse::MultiEraOutput;
@@ -5,13 +6,13 @@ use pallas::ledger::traverse::{Asset, MultiEraBlock, OutputRef};
 use pallas::network::miniprotocols::Point;
 use serde::Deserialize;
 
+use crate::model::CRDTCommand;
 use crate::{crosscut, model, prelude::*};
 
 #[derive(Deserialize)]
 pub struct Config {
-    pub key_prefix: String,
+    // TODO: save_ada: bool // default to false
     pub filter: Option<crosscut::filters::Predicate>,
-    pub policy_id_hex: Option<String>,
 }
 
 pub struct Reducer {
@@ -20,55 +21,20 @@ pub struct Reducer {
 }
 
 impl Reducer {
-    fn get_native(asset: &Asset) -> Option<(&Hash<28>, &Vec<u8>, &u64)> {
-        match asset {
-            Asset::Ada(..) => None,
-            Asset::NativeAsset(cs, tn, amt) => Some((cs, tn, amt)),
-        }
-    }
-
-    fn get_tokens_amount(&self, utxo: &MultiEraOutput) -> i64 {
-        match &self.config.policy_id_hex {
-            None => utxo.lovelace_amount() as i64,
-            Some(policy_id_hex) => utxo
-                .non_ada_assets()
-                .iter()
-                .flat_map(|asset| Self::get_native(asset))
-                .filter(|(cs, _, _)| &hex::encode(cs) == policy_id_hex)
-                .map(|(_, _, amt)| *amt as i64)
-                .sum(),
-        }
-    }
-
     fn process_consumed_txo(
         &mut self,
         block: &MultiEraBlock,
-        ctx: &model::BlockContext,
         input: &OutputRef,
         output: &mut super::OutputPort,
     ) -> Result<(), gasket::error::Error> {
         let point = Point::Specific(block.slot(), block.hash().to_vec());
-        let utxo = ctx.find_utxo(input).apply_policy(&self.policy).or_panic()?;
-
-        let utxo = match utxo {
-            Some(x) => x,
-            None => return Ok(()),
-        };
-
-        let address = match utxo.address().or_panic()? {
-            Address::Shelley(x) => x,
-            _ => return Ok(()),
-        };
-
-        let prefix = self.config.key_prefix.clone();
-
-        let delta = self.get_tokens_amount(&utxo);
-        if delta != 0 {
-            let crdt = model::CRDTCommand::voting_power_change(address, prefix, -1 * delta, point);
-            output.send(gasket::messaging::Message::from(crdt))?;
-        }
-
-        Ok(())
+        output.send(gasket::messaging::Message::from(
+            CRDTCommand::VotingPowerSpent {
+                tx_id: input.hash().encode_hex(),
+                tx_idx: input.index() as usize,
+                point,
+            },
+        ))
     }
 
     fn process_produced_txo(
@@ -76,6 +42,8 @@ impl Reducer {
         block: &MultiEraBlock,
         tx_output: &MultiEraOutput,
         output: &mut super::OutputPort,
+        utxo_idx: usize,
+        tx_hash: Hash<32>,
     ) -> Result<(), gasket::error::Error> {
         let point = Point::Specific(block.slot(), block.hash().to_vec());
         let address = match tx_output.address().or_panic()? {
@@ -83,14 +51,26 @@ impl Reducer {
             _ => return Ok(()),
         };
 
-        let prefix = self.config.key_prefix.clone();
+        tx_output.non_ada_assets().iter().for_each(|asset| {
+            let (policy, name, amount) = match &asset {
+                Asset::Ada(amount) => (String::new(), String::new(), *amount),
+                Asset::NativeAsset(cs, tn, amount) => (cs.encode_hex(), tn.encode_hex(), *amount),
+            };
 
-        let delta = self.get_tokens_amount(&tx_output);
-        if delta != 0 {
-            let crdt = model::CRDTCommand::voting_power_change(address, prefix, delta, point);
-            output.send(gasket::messaging::Message::from(crdt))?;
-        }
-
+            output
+                .send(gasket::messaging::Message::from(
+                    CRDTCommand::VotingPowerCreated {
+                        owner: address.clone(),
+                        policy,
+                        name,
+                        amount,
+                        point: point.clone(),
+                        tx_id: tx_hash.encode_hex(),
+                        tx_idx: utxo_idx,
+                    },
+                ))
+                .unwrap()
+        });
         Ok(())
     }
 
@@ -103,11 +83,11 @@ impl Reducer {
         for tx in block.txs().into_iter() {
             if filter_matches!(self, block, &tx, ctx) {
                 for consumed in tx.consumes().iter().map(|i| i.output_ref()) {
-                    self.process_consumed_txo(block, &ctx, &consumed, output)?;
+                    self.process_consumed_txo(block, &consumed, output)?;
                 }
 
-                for (_, produced) in tx.produces() {
-                    self.process_produced_txo(block, &produced, output)?;
+                for (idx, produced) in tx.produces() {
+                    self.process_produced_txo(block, &produced, output, idx, tx.hash())?;
                 }
             }
         }

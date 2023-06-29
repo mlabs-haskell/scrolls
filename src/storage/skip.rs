@@ -88,14 +88,24 @@ impl gasket::runtime::Worker for Worker {
             model::CRDTCommand::BlockStarting(point) => {
                 log::debug!("block started {:?}", point);
             }
-            model::CRDTCommand::VotingPowerChange(address, policy, value, point) => {
+            model::CRDTCommand::VotingPowerCreated {
+                owner,
+                policy,
+                name,
+                amount,
+                point,
+                ..
+            } => {
                 log::debug!(
-                    "changing voting power of [{}] for [{:?}], delta [{}], at [{:?}]",
-                    policy,
-                    address,
-                    value,
-                    point
+                    "adding [{amount}] voting power for [{owner:?}] of [{policy}.{name}], at [{point:?}]",
                 );
+            }
+            model::CRDTCommand::VotingPowerSpent {
+                tx_id,
+                tx_idx,
+                point,
+            } => {
+                log::debug!("removing voting power [{tx_id}#{tx_idx}] at [{point:?}]",);
             }
             model::CRDTCommand::BlockFinished(point) => {
                 log::debug!("block finished {:?}", point);

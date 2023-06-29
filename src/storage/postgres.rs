@@ -136,17 +136,22 @@ impl gasket::runtime::Worker for Worker {
                 );
 
                 CREATE TABLE IF NOT EXISTS voting_power (
-                    id       SERIAL PRIMARY KEY,
-                    spending TEXT NOT NULL,
-                    staking  TEXT NOT NULL,
-                    policy   TEXT NOT NULL,
-                    delta    BIGINT NOT NULL,
-                    slot     BIGINT NOT NULL REFERENCES cursor ON DELETE CASCADE
+                    id           SERIAL PRIMARY KEY,
+                    spending     TEXT NOT NULL,
+                    staking      TEXT NOT NULL,
+                    policy       TEXT NOT NULL,
+                    token        TEXT NOT NULL,
+                    amount       BIGINT NOT NULL,
+                    created_slot BIGINT NOT NULL REFERENCES cursor ON DELETE CASCADE,
+                    tx_id        TEXT NOT NULL,
+                    tx_idx       BIGINT NOT NULL,
+                    spent_slot   BIGINT
                 );
 
                 CREATE INDEX IF NOT EXISTS voting_power_spending_idx ON voting_power (spending);
                 CREATE INDEX IF NOT EXISTS voting_power_staking_idx ON voting_power (staking);
                 CREATE INDEX IF NOT EXISTS voting_power_policy_idx ON voting_power (policy);
+                CREATE INDEX IF NOT EXISTS voting_power_token_idx ON voting_power (token);
             ",
             )
             .or_panic()?;
@@ -171,23 +176,56 @@ impl gasket::runtime::Worker for Worker {
             }
             model::CRDTCommand::BlockStarting(Point::Origin) => {}
             model::CRDTCommand::BlockFinished(_) => {}
-            model::CRDTCommand::VotingPowerChange(
-                address,
+            model::CRDTCommand::VotingPowerCreated {
+                owner,
                 policy,
-                delta,
-                Point::Specific(slot, _hash),
-            ) => {
-                let spending = address.payment().to_hex();
-                let staking = address.delegation().to_hex();
+                name,
+                amount,
+                point: Point::Specific(slot, _hash),
+                tx_id,
+                tx_idx,
+            } => {
+                let spending = owner.payment().to_hex();
+                let staking = owner.delegation().to_hex();
 
                 self.connection
                     .as_mut()
                     .unwrap()
-                    .execute("INSERT INTO voting_power (spending, staking, policy, delta, slot) VALUES ($1, $2, $3, $4, $5)"
-                             , &[&spending, &staking, &policy, &delta, &(slot as i64)])
+                    .execute("INSERT INTO voting_power (spending, staking, policy, token, amount, created_slot, tx_id, tx_idx, spent_slot) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL)"
+                             , &[&spending,
+				 &staking,
+				 &policy,
+				 &name,
+				 &(amount as i64),
+				 &(slot as i64),
+				 &tx_id,
+				 &(tx_idx as i64)
+			     ])
                     .or_panic()?;
             }
-            model::CRDTCommand::VotingPowerChange(_, _, _, Point::Origin) => {}
+            model::CRDTCommand::VotingPowerCreated {
+                point: Point::Origin,
+                ..
+            } => unreachable!(),
+            model::CRDTCommand::VotingPowerSpent {
+                tx_id,
+                tx_idx,
+                point,
+            } => {
+                let slot = match point {
+                    Point::Specific(slot, _) => slot,
+                    Point::Origin => 0,
+                };
+
+                self.connection
+                    .as_mut()
+                    .unwrap()
+                    .execute(
+                        "UPDATE voting_power SET spent_slot = $1 WHERE tx_id = $2 AND tx_idx = $3",
+                        &[&(slot as i64), &tx_id, &(tx_idx as i64)],
+                    )
+                    .or_panic()?;
+            }
             model::CRDTCommand::RollBack(point) => {
                 let slot = match point {
                     Point::Specific(slot, _) => slot,
@@ -197,6 +235,15 @@ impl gasket::runtime::Worker for Worker {
                     .as_mut()
                     .unwrap()
                     .execute("DELETE FROM cursor WHERE slot > $1", &[&(slot as i64)])
+                    .or_panic()?;
+
+                self.connection
+                    .as_mut()
+                    .unwrap()
+                    .execute(
+                        "UPDATE voting_power SET spent_slot = NULL WHERE spent_slot > $1",
+                        &[&(slot as i64)],
+                    )
                     .or_panic()?;
             }
         };

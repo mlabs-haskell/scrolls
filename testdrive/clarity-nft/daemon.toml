@@ -1,16 +1,10 @@
 [source]
 type = "N2N"
-address = "relay1.nordicpool.org:3005"
+address = "relays-new.cardano-mainnet.iohk.io:3001"
 min_depth = 1
-
-[enrich]
-type = "Sled"
-db_path = "sled_db"
 
 [[reducers]]
 type = "BalanceByAddress"
-key_prefix = "c0572f12a92486540cc7454ce9016cba322ff47722bc85637372c31e"
-policy_id_hex = "c0572f12a92486540cc7454ce9016cba322ff47722bc85637372c31e"
 
 [storage]
 type = "Postgres"
@@ -23,6 +17,5 @@ type = "Mainnet"
 type = "Point"
 value = [ 67305077, "55c5a9ff1f292aa77046f6f4f95be25173444c2e52998245c7f6e0f2d8e40804" ]
 
-# Decide what to do here on real deployment
 [policy]
 missing_data = "Skip"

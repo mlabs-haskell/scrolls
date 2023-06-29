@@ -1,3 +1,4 @@
+use hex::ToHex;
 use pallas::codec::utils::CborWrap;
 use pallas::crypto::hash::Hash;
 use pallas::ledger::addresses::{
@@ -36,15 +37,15 @@ impl Reducer {
         }
     }
 
-    fn get_tokens_amount(&self, utxo: &MultiEraOutput) -> i64 {
+    fn get_tokens_amount(&self, utxo: &MultiEraOutput) -> u64 {
         match &self.config.policy_id_hex {
-            None => utxo.lovelace_amount() as i64,
+            None => utxo.lovelace_amount(),
             Some(policy_id_hex) => utxo
                 .non_ada_assets()
                 .iter()
                 .flat_map(|asset| Self::get_native(asset))
                 .filter(|(cs, _, _)| &hex::encode(cs) == policy_id_hex)
-                .map(|(_, _, amt)| *amt as i64)
+                .map(|(_, _, amt)| *amt)
                 .sum(),
         }
     }
@@ -86,54 +87,18 @@ impl Reducer {
 
     fn process_consumed_txo(
         &mut self,
-        ctx: &model::BlockContext,
         block: &MultiEraBlock,
         input: &OutputRef,
         output: &mut super::OutputPort,
     ) -> Result<(), gasket::error::Error> {
         let point = Point::Specific(block.slot(), block.hash().to_vec());
-        let utxo = ctx.find_utxo(input).apply_policy(&self.policy).or_panic()?;
-
-        let utxo = match utxo {
-            Some(x) => x,
-            None => return Ok(()),
-        };
-
-        let address = utxo.address().map(|addr| addr.to_string()).or_panic()?;
-        if self.config.script_address != address {
-            return Ok(());
-        }
-
-        let owner = match utxo.datum() {
-            Some(DatumOption::Data(CborWrap(datum))) => Self::datum_to_address(&datum),
-            Some(DatumOption::Hash(hash)) => {
-                let datums = get_datums(block);
-                let datum = datums.get(&hash);
-                match datum {
-                    Some(datum) => Self::datum_to_address(datum),
-                    None => None,
-                }
-            }
-            None => None,
-        };
-        log::debug!("Found Genius stake owner: {:?}", owner);
-
-        match owner {
-            Some(owner) => {
-                let prefix = self.config.key_prefix.clone();
-
-                let delta = self.get_tokens_amount(&utxo);
-                if delta != 0 {
-                    let crdt =
-                        model::CRDTCommand::voting_power_change(owner, prefix, -1 * delta, point);
-                    output.send(gasket::messaging::Message::from(crdt))?;
-                }
-                return Ok(());
-            }
-            None => {
-                return Ok(());
-            }
-        }
+        output.send(gasket::messaging::Message::from(
+            model::CRDTCommand::VotingPowerSpent {
+                tx_id: input.hash().encode_hex(),
+                tx_idx: input.index() as usize,
+                point,
+            },
+        ))
     }
 
     fn process_produced_txo(
@@ -141,6 +106,8 @@ impl Reducer {
         block: &MultiEraBlock,
         tx_output: &MultiEraOutput,
         output: &mut super::OutputPort,
+        utxo_idx: usize,
+        tx_hash: Hash<32>,
     ) -> Result<(), gasket::error::Error> {
         let point = Point::Specific(block.slot(), block.hash().to_vec());
 
@@ -171,7 +138,15 @@ impl Reducer {
 
                 let delta = self.get_tokens_amount(&tx_output);
                 if delta != 0 {
-                    let crdt = model::CRDTCommand::voting_power_change(owner, prefix, delta, point);
+                    let crdt = model::CRDTCommand::VotingPowerCreated {
+                        owner,
+                        policy: prefix,
+                        name: "".to_string(),
+                        amount: delta,
+                        point,
+                        tx_id: tx_hash.encode_hex(),
+                        tx_idx: utxo_idx,
+                    };
                     output.send(gasket::messaging::Message::from(crdt))?;
                 }
             }
@@ -189,11 +164,11 @@ impl Reducer {
         for tx in block.txs().into_iter() {
             if filter_matches!(self, block, &tx, ctx) {
                 for consumed in tx.consumes().iter().map(|i| i.output_ref()) {
-                    self.process_consumed_txo(&ctx, &block, &consumed, output)?;
+                    self.process_consumed_txo(&block, &consumed, output)?;
                 }
 
-                for (_, produced) in tx.produces() {
-                    self.process_produced_txo(&block, &produced, output)?;
+                for (idx, produced) in tx.produces() {
+                    self.process_produced_txo(&block, &produced, output, idx, tx.hash())?;
                 }
             }
         }
