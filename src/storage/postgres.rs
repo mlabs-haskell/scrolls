@@ -152,6 +152,7 @@ impl gasket::runtime::Worker for Worker {
                 CREATE INDEX IF NOT EXISTS voting_power_staking_idx ON voting_power (staking);
                 CREATE INDEX IF NOT EXISTS voting_power_policy_idx ON voting_power (policy);
                 CREATE INDEX IF NOT EXISTS voting_power_token_idx ON voting_power (token);
+                CREATE INDEX IF NOT EXISTS voting_power_utxo_idx ON voting_power (tx_id, tx_idx);
             ",
             )
             .or_panic()?;

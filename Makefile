@@ -1,3 +1,5 @@
+.PHONY: db_init db_start db_stop psql requires_nix_shell
+
 db_init: requires_nix_shell
 	mkdir -p db
 	initdb -D db
