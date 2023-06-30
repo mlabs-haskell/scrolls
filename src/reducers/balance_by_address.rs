@@ -53,7 +53,7 @@ impl Reducer {
 
         tx_output.non_ada_assets().iter().for_each(|asset| {
             let (policy, name, amount) = match &asset {
-                Asset::Ada(amount) => (String::new(), String::new(), *amount),
+                Asset::Ada(_) => unreachable!(),
                 Asset::NativeAsset(cs, tn, amount) => (cs.encode_hex(), tn.encode_hex(), *amount),
             };
 
